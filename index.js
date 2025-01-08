@@ -21,19 +21,23 @@ const generateRandomPosition = () => {
 };
 
 io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+    console.log("User connected to the webpage:", socket.id);
 
-    users.push({
-        id: socket.id,
-        position: generateRandomPosition(),
-        animation: "idle",
-        rotation: 0,
-        linvel: 0,
-        containerRotation: 0,
-    });
+    socket.on("roomConnect", ()=> {
+        console.log("User connected to room:", socket.id);
 
-    console.log("Current users:", users);
-    io.emit("users", users);
+        users.push({
+            id: socket.id,
+            position: generateRandomPosition(),
+            animation: "idle",
+            rotation: 0,
+            linvel: 0,
+            containerRotation: 0,
+        });
+
+        console.log("Current users:", users);
+        io.emit("users", users);
+    })
 
     socket.on("move", (user) => {
         const userToUpdate = users.find((u) => u.id === socket.id);
