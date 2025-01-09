@@ -23,11 +23,15 @@ const generateRandomPosition = () => {
 io.on("connection", (socket) => {
     console.log("User connected to the webpage:", socket.id);
 
-    socket.on("roomConnect", ()=> {
+    socket.on("roomConnect", ({name, hairColor, suitColor, trousersColor})=> {
         console.log("User connected to room:", socket.id);
 
         users.push({
             id: socket.id,
+            name: name,
+            hairColor: hairColor,
+            suitColor: suitColor,
+            trousersColor: trousersColor,
             position: generateRandomPosition(),
             animation: "idle",
             rotation: 0,
