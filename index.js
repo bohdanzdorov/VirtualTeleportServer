@@ -15,6 +15,7 @@ const io = new Server(server, {
 });
 
 const users = [];
+let curTvLink = {tvLink: "https://www.youtube.com/embed/yGzqD-g2gts"}
 
 const generateRandomPosition = () => {
     return [0, 1, 0];
@@ -42,6 +43,7 @@ io.on("connection", (socket) => {
 
         console.log("Current users:", users);
         io.emit("users", users);
+        io.emit("tvLink", curTvLink)
     })
 
     socket.on("move", (user) => {
@@ -55,6 +57,11 @@ io.on("connection", (socket) => {
             io.emit("users", users);
         }
     });
+
+    socket.on("tvLink", (tvLink) => {
+        curTvLink = tvLink
+        socket.broadcast.emit("tvLink", curTvLink)
+    })
 
     socket.on("audioStream", (audioData) => {
         socket.broadcast.emit("audioStream", audioData);
