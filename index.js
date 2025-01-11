@@ -26,7 +26,9 @@ io.on("connection", (socket) => {
 
     socket.on("roomConnect", ({name, hairColor, suitColor, trousersColor, gender})=> {
         console.log("User connected to room:", socket.id);
-
+        if(!name){
+            name = "User"
+        }
         users.push({
             id: socket.id,
             name: name,
@@ -42,6 +44,7 @@ io.on("connection", (socket) => {
         });
 
         console.log("Current users:", users);
+        io.emit("connectAudio")
         io.emit("users", users);
         io.emit("tvLink", curTvLink)
     })
@@ -60,7 +63,7 @@ io.on("connection", (socket) => {
 
     socket.on("tvLink", (tvLink) => {
         curTvLink = tvLink
-        socket.broadcast.emit("tvLink", curTvLink)
+        socket.broadcast.emit("tvLink", tvLink)
     })
 
     socket.on("audioStream", (audioData) => {
