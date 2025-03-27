@@ -38,7 +38,7 @@ io.on("connection", (socket) => {
             trousersColor: trousersColor,
             position: generateRandomPosition(),
             animation: "idle",
-            rotation: 0,
+            rotation: [0, 0, 0],
             linvel: 0,
             containerRotation: 0,
         });
