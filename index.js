@@ -3,7 +3,7 @@ import { Server } from 'socket.io';
 import http from 'http';
 import dotenv from 'dotenv';
 
-dotenv.config();  
+dotenv.config();
 
 
 const app = express();
@@ -15,7 +15,8 @@ const io = new Server(server, {
 });
 
 const users = [];
-let curTvLink = {tvLink: "https://www.youtube.com/embed/yGzqD-g2gts"}
+let webCamTVConnections = [];
+let curTvLink = { tvLink: "https://www.youtube.com/embed/yGzqD-g2gts" }
 
 const generateRandomPosition = () => {
     return [0, 1, 0];
@@ -24,9 +25,9 @@ const generateRandomPosition = () => {
 io.on("connection", (socket) => {
     console.log("User connected to the webpage:", socket.id);
 
-    socket.on("roomConnect", ({name, hairColor, suitColor, trousersColor, gender})=> {
+    socket.on("roomConnect", ({ name, hairColor, suitColor, trousersColor, gender }) => {
         console.log("User connected to room:", socket.id);
-        if(!name){
+        if (!name) {
             name = "User"
         }
         users.push({
@@ -47,6 +48,7 @@ io.on("connection", (socket) => {
         io.emit("connectAudio")
         io.emit("users", users);
         io.emit("tvLink", curTvLink)
+        io.emit("occupyWebCamTV", webCamTVConnections)
     })
 
     socket.on("move", (user) => {
@@ -61,6 +63,22 @@ io.on("connection", (socket) => {
         }
     });
 
+    socket.on("occupyWebCamTV", (chooseTvData) => {
+        const { userId, tvNumber } = chooseTvData;
+        const isTvOccupied = webCamTVConnections.some(a => a.tvNumber === tvNumber);
+        if (isTvOccupied) {
+            io.emit("occupyWebCamTV", webCamTVConnections)
+            return
+        }
+        const updatedConnections = webCamTVConnections.filter(a => a.userId !== userId);
+
+        updatedConnections.push(chooseTvData);
+
+        webCamTVConnections = [...updatedConnections]
+        console.log("tv occupied: ", webCamTVConnections)
+        io.emit("occupyWebCamTV", webCamTVConnections)
+    })
+
     socket.on("tvLink", (tvLink) => {
         curTvLink = tvLink
         socket.broadcast.emit("tvLink", tvLink)
@@ -72,6 +90,11 @@ io.on("connection", (socket) => {
 
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
+        const webCamIndex = webCamTVConnections.findIndex((u) => u.userId === socket.id);
+        if (webCamIndex !== -1) webCamTVConnections.splice(webCamIndex, 1);
+        console.log(webCamTVConnections)
+        io.emit("occupyWebCamTV", webCamTVConnections);
+
         const index = users.findIndex((u) => u.id === socket.id);
         if (index !== -1) users.splice(index, 1);
         console.log("Updated users:", users);
