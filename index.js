@@ -17,7 +17,7 @@ const APP_ID = process.env.APP_ID;
 const APP_CERTIFICATE = process.env.APP_CERTIFICATE;
 
 app.use(cors({
-    origin: 'http://localhost:5173' 
+    origin: 'https://virtualteleport.netlify.app' 
 }));
 const io = new Server(server, {
     cors: { origin: process.env.CORS_ORIGIN }
