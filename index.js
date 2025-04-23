@@ -2,14 +2,23 @@ import express from 'express';
 import { Server } from 'socket.io';
 import http from 'http';
 import dotenv from 'dotenv';
+import cors from 'cors';
+import pkg from 'agora-access-token';
+const { RtcTokenBuilder, RtcRole } = pkg;
 
 dotenv.config();
-
 
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT;
 
+//Agora data
+const APP_ID = process.env.APP_ID;
+const APP_CERTIFICATE = process.env.APP_CERTIFICATE;
+
+app.use(cors({
+    origin: 'http://localhost:5173' 
+}));
 const io = new Server(server, {
     cors: { origin: process.env.CORS_ORIGIN }
 });
@@ -101,6 +110,27 @@ io.on("connection", (socket) => {
         io.emit("users", users);
     });
 });
+
+app.get('/rtc-token', (req, res) => {
+    const channelName = req.query.channelName;
+    const uid = req.query.uid;
+    const role = RtcRole.PUBLISHER;
+  
+    const expirationTimeInSeconds = 3600; 
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+  
+    const token = RtcTokenBuilder.buildTokenWithUid(
+      APP_ID,
+      APP_CERTIFICATE,
+      channelName,
+      uid,
+      role,
+      privilegeExpiredTs
+    );
+  
+    res.json({ token });
+  });
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
