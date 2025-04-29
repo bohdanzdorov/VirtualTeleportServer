@@ -17,7 +17,8 @@ const APP_ID = process.env.APP_ID;
 const APP_CERTIFICATE = process.env.APP_CERTIFICATE;
 
 app.use(cors({
-    origin: 'https://virtualteleport.netlify.app' 
+     origin: 'https://virtualteleport.netlify.app' 
+    // origin: 'http://localhost:5173'
 }));
 const io = new Server(server, {
     cors: { origin: process.env.CORS_ORIGIN }
@@ -47,6 +48,7 @@ io.on("connection", (socket) => {
             suitColor: suitColor,
             trousersColor: trousersColor,
             position: generateRandomPosition(),
+            isVisible: true,
             animation: "idle",
             rotation: [0, 0, 0],
             linvel: 0,
@@ -84,18 +86,36 @@ io.on("connection", (socket) => {
         updatedConnections.push(chooseTvData);
 
         webCamTVConnections = [...updatedConnections]
-        console.log("tv occupied: ", webCamTVConnections)
         io.emit("occupyWebCamTV", webCamTVConnections)
+
+        const userToUpdate = users.find((u) => u.id === userId);
+        if (userToUpdate) {
+            userToUpdate.isVisible = false
+            io.emit("users", users);
+        }
+    })
+
+    socket.on("freeWebCamTV", (chooseTvData) => {
+        const { userId } = chooseTvData;
+        const isTvOccupied = webCamTVConnections.some(a => a.userId === userId);
+        if (isTvOccupied) {
+            const updatedConnections = webCamTVConnections.filter(a => a.userId !== userId);
+            webCamTVConnections = [...updatedConnections]
+            io.emit("occupyWebCamTV", webCamTVConnections)
+
+            const userToUpdate = users.find((u) => u.id === userId);
+            if (userToUpdate) {
+                userToUpdate.isVisible = true
+                io.emit("users", users);
+            }
+            return
+        }
     })
 
     socket.on("tvLink", (tvLink) => {
         curTvLink = tvLink
         socket.broadcast.emit("tvLink", tvLink)
     })
-
-    socket.on("audioStream", (audioData) => {
-        socket.broadcast.emit("audioStream", audioData);
-    });
 
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
