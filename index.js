@@ -56,9 +56,12 @@ io.on("connection", (socket) => {
         });
 
         console.log("Current users:", users);
-        io.emit("connectAudio")
         io.emit("users", users);
         io.emit("tvLink", curTvLink)
+        io.emit("occupyWebCamTV", webCamTVConnections)
+    })
+
+    socket.on("monitorModeConnect", () => {
         io.emit("occupyWebCamTV", webCamTVConnections)
     })
 
@@ -87,7 +90,7 @@ io.on("connection", (socket) => {
 
         webCamTVConnections = [...updatedConnections]
         io.emit("occupyWebCamTV", webCamTVConnections)
-
+                
         const userToUpdate = users.find((u) => u.id === userId);
         if (userToUpdate) {
             userToUpdate.isVisible = false
