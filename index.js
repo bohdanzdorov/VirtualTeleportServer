@@ -26,8 +26,6 @@ const io = new Server(server, {
 
 //Array to store all user objects
 const users = [];
-//Array to store all userId-tvNumber pairs
-let webCamTVConnections = [];
 //Object to store current TV link
 let curTvLink = { tvLink: "https://www.youtube.com/embed/yGzqD-g2gts" }
 
@@ -61,13 +59,6 @@ io.on("connection", (socket) => {
         console.log("Current users:", users);
         io.emit("users", users);
         io.emit("tvLink", curTvLink)
-        io.emit("occupyWebCamTV", webCamTVConnections)
-    })
-
-    //When user connects in monitor mode
-    socket.on("monitorModeConnect", () => {
-        //Reply giving all the webCanTvConnections
-        io.emit("occupyWebCamTV", webCamTVConnections)
     })
 
     //When user moves its avatar
@@ -81,32 +72,6 @@ io.on("connection", (socket) => {
         }
     });
 
-    //When users occupies one of the virtual monitors
-    socket.on("occupyWebCamTV", (chooseTvData) => {
-        const { userId, tvNumber } = chooseTvData;
-        //Check if wanted monitor is not already occupied
-        const isTvOccupied = webCamTVConnections.some(a => a.tvNumber === tvNumber);
-        if (isTvOccupied) {
-            io.emit("occupyWebCamTV", webCamTVConnections)
-            return
-        }
-        const updatedConnections = webCamTVConnections.filter(a => a.userId !== userId);
-
-        //Add connection
-        updatedConnections.push(chooseTvData);
-
-        webCamTVConnections = [...updatedConnections]
-        //Notify all users about that update
-        io.emit("occupyWebCamTV", webCamTVConnections)
-
-        //Hide the user's avatar
-        const userToUpdate = users.find((u) => u.id === userId);
-        if (userToUpdate) {
-            userToUpdate.isVisible = false
-            io.emit("users", users);
-        }
-    })
-
     //When user leaves the virtual monitor
     socket.on("freeWebCamTV", (chooseTvData) => {
         const { userId } = chooseTvData;
@@ -115,8 +80,6 @@ io.on("connection", (socket) => {
             //Remove the correct entrance in webCamTVConnections 
             const updatedConnections = webCamTVConnections.filter(a => a.userId !== userId);
             webCamTVConnections = [...updatedConnections]
-            //Notify all users about that update
-            io.emit("occupyWebCamTV", webCamTVConnections)
 
             //Show the user's avatar
             const userToUpdate = users.find((u) => u.id === userId);
@@ -137,11 +100,6 @@ io.on("connection", (socket) => {
     //When user leaves
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
-        //Remove the connection to monitor, if exists
-        const webCamIndex = webCamTVConnections.findIndex((u) => u.userId === socket.id);
-        if (webCamIndex !== -1) webCamTVConnections.splice(webCamIndex, 1);
-        console.log(webCamTVConnections)
-        io.emit("occupyWebCamTV", webCamTVConnections);
 
         //Remove from the users list
         const index = users.findIndex((u) => u.id === socket.id);
