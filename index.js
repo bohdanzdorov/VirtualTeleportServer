@@ -28,6 +28,8 @@ const io = new Server(server, {
 const users = [];
 //Object to store current TV link
 let curTvLink = { tvLink: "https://www.youtube.com/embed/yGzqD-g2gts" }
+//Boolean to store current TV visibility
+let isTVVisible = true;
 
 const generateRandomPosition = () => {
     return [0, 1, 0];
@@ -58,7 +60,8 @@ io.on("connection", (socket) => {
         //Reply with all current info about state of virtual space
         console.log("Current users:", users);
         io.emit("users", users);
-        io.emit("tvLink", curTvLink)
+        io.emit("tvLink", curTvLink);
+        io.emit("tvVisibility", { isTVVisible });
     })
 
     //When user moves its avatar
@@ -96,6 +99,14 @@ io.on("connection", (socket) => {
         curTvLink = tvLink
         socket.broadcast.emit("tvLink", tvLink)
     })
+
+    //When one of the users toggles TV visibility
+    socket.on("tvVisibility", ({ isTVVisible: newState }) => {
+        if (typeof newState === "boolean") {
+            isTVVisible = newState;
+            io.emit("tvVisibility", { isTVVisible });
+        }
+    });
 
     //When user leaves
     socket.on("disconnect", () => {
