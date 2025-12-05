@@ -24,12 +24,37 @@ const io = new Server(server, {
     cors: { origin: process.env.CORS_ORIGIN }
 });
 
-//Array to store all user objects
-const users = [];
-//Object to store current TV link
-let curTvLink = { tvLink: "https://www.youtube.com/embed/yGzqD-g2gts" }
-//Boolean to store current TV visibility
-let isTVVisible = true;
+// Default state per room
+const DEFAULT_TV_LINK = { tvLink: "https://www.youtube.com/embed/yGzqD-g2gts" };
+
+// Rooms registry: roomId -> { users, tvLink, isTVVisible, webCamTVConnections }
+const rooms = new Map();
+
+const normalizeRoomId = (roomIdInput) => {
+    const val = typeof roomIdInput === "string" ? roomIdInput.trim().toUpperCase() : "";
+    return val || "LOBBY";
+};
+
+const ensureRoom = (roomId = "LOBBY") => {
+    const normalized = normalizeRoomId(roomId);
+    if (!rooms.has(normalized)) {
+        rooms.set(normalized, {
+            users: [],
+            tvLink: { ...DEFAULT_TV_LINK },
+            isTVVisible: true,
+            webCamTVConnections: [],
+        });
+    }
+    return rooms.get(normalized);
+};
+
+const findUserRoom = (socketId) => {
+    for (const [roomId, room] of rooms.entries()) {
+        const user = room.users.find((u) => u.id === socketId);
+        if (user) return { roomId, room, user };
+    }
+    return null;
+};
 
 const generateRandomPosition = () => {
     return [0, 1, 0];
@@ -39,12 +64,14 @@ io.on("connection", (socket) => {
     console.log("User connected to the webpage:", socket.id);
 
     //When user connects to the virtual environment
-    socket.on("roomConnect", ({ name, hairColor, suitColor, trousersColor, gender }) => {
+    socket.on("roomConnect", ({ name, hairColor, suitColor, trousersColor, gender, roomId }) => {
+        const targetRoomId = normalizeRoomId(roomId);
+        const room = ensureRoom(targetRoomId);
         console.log("User connected to room:", socket.id);
         if (!name) {
             name = "User"
         }
-        users.push({
+        const newUser = {
             id: socket.id,
             name: name,
             gender: gender,
@@ -55,56 +82,65 @@ io.on("connection", (socket) => {
             isVisible: true,
             animation: "idle",
             rotation: [0, 0, 0],
-        });
+            roomId: targetRoomId,
+        };
+        room.users.push(newUser);
+        socket.join(targetRoomId);
 
         //Reply with all current info about state of virtual space
-        console.log("Current users:", users);
-        io.emit("users", users);
-        io.emit("tvLink", curTvLink);
-        io.emit("tvVisibility", { isTVVisible });
+        console.log("Current users in room", targetRoomId, room.users);
+        io.to(targetRoomId).emit("users", room.users);
+        io.to(targetRoomId).emit("tvLink", room.tvLink);
+        io.to(targetRoomId).emit("tvVisibility", { isTVVisible: room.isTVVisible });
     })
 
     //When user moves its avatar
     socket.on("move", (user) => {
-        const userToUpdate = users.find((u) => u.id === socket.id);
-        if (userToUpdate) {
-            userToUpdate.position = user.position;
-            userToUpdate.animation = user.animation;
-            userToUpdate.rotation = user.rotation;
-            io.emit("users", users);
-        }
+        const found = findUserRoom(socket.id);
+        if (!found) return;
+        const { roomId, room, user: userToUpdate } = found;
+        userToUpdate.position = user.position;
+        userToUpdate.animation = user.animation;
+        userToUpdate.rotation = user.rotation;
+        io.to(roomId).emit("users", room.users);
     });
 
     //When user leaves the virtual monitor
     socket.on("freeWebCamTV", (chooseTvData) => {
         const { userId } = chooseTvData;
-        const isTvOccupied = webCamTVConnections.some(a => a.userId === userId);
+        const found = findUserRoom(userId);
+        if (!found) return;
+        const { roomId, room } = found;
+        const isTvOccupied = room.webCamTVConnections.some(a => a.userId === userId);
         if (isTvOccupied) {
-            //Remove the correct entrance in webCamTVConnections 
-            const updatedConnections = webCamTVConnections.filter(a => a.userId !== userId);
-            webCamTVConnections = [...updatedConnections]
+            const updatedConnections = room.webCamTVConnections.filter(a => a.userId !== userId);
+            room.webCamTVConnections = [...updatedConnections];
 
-            //Show the user's avatar
-            const userToUpdate = users.find((u) => u.id === userId);
+            const userToUpdate = room.users.find((u) => u.id === userId);
             if (userToUpdate) {
                 userToUpdate.isVisible = true
-                io.emit("users", users);
+                io.to(roomId).emit("users", room.users);
             }
-            return
         }
     })
 
     //When one of the users update the virtual TV link
     socket.on("tvLink", (tvLink) => {
-        curTvLink = tvLink
-        socket.broadcast.emit("tvLink", tvLink)
+        const found = findUserRoom(socket.id);
+        if (!found) return;
+        const { roomId, room } = found;
+        room.tvLink = tvLink;
+        io.to(roomId).emit("tvLink", tvLink);
     })
 
     //When one of the users toggles TV visibility
     socket.on("tvVisibility", ({ isTVVisible: newState }) => {
+        const found = findUserRoom(socket.id);
+        if (!found) return;
         if (typeof newState === "boolean") {
-            isTVVisible = newState;
-            io.emit("tvVisibility", { isTVVisible });
+            const { roomId, room } = found;
+            room.isTVVisible = newState;
+            io.to(roomId).emit("tvVisibility", { isTVVisible: room.isTVVisible });
         }
     });
 
@@ -112,11 +148,19 @@ io.on("connection", (socket) => {
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
 
-        //Remove from the users list
-        const index = users.findIndex((u) => u.id === socket.id);
-        if (index !== -1) users.splice(index, 1);
-        console.log("Updated users:", users);
-        io.emit("users", users);
+        const found = findUserRoom(socket.id);
+        if (!found) return;
+        const { roomId, room } = found;
+        room.users = room.users.filter((u) => u.id !== socket.id);
+        if (room.users.length === 0) {
+            rooms.delete(roomId);
+            console.log("Room removed (empty):", roomId);
+            return;
+        }
+
+        console.log("Updated users in room", roomId, room.users);
+        io.to(roomId).emit("users", room.users);
+        
     });
 });
 
