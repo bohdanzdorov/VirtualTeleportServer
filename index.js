@@ -25,7 +25,7 @@ const io = new Server(server, {
 });
 
 // Default state per room
-const DEFAULT_TV_LINK = { tvLink: "https://www.youtube.com/embed/yGzqD-g2gts" };
+const DEFAULT_TV_LINK = { tvLink: "https://www.youtube.com/embed/dQw4w9WgXcQ" };
 
 // Rooms registry: roomId -> { users, tvLink, isTVVisible, webCamTVConnections }
 const rooms = new Map();
