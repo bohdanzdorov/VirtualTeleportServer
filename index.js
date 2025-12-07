@@ -56,6 +56,29 @@ const findUserRoom = (socketId) => {
     return null;
 };
 
+const removeUserFromRoom = (socketId) => {
+    const found = findUserRoom(socketId);
+    if (!found) return null;
+
+    const { roomId, room } = found;
+
+    if (Array.isArray(room.webCamTVConnections) && room.webCamTVConnections.length > 0) {
+        room.webCamTVConnections = room.webCamTVConnections.filter((connection) => connection.userId !== socketId);
+    }
+
+    room.users = room.users.filter((u) => u.id !== socketId);
+
+    if (room.users.length === 0) {
+        rooms.delete(roomId);
+        console.log("Room removed (empty):", roomId);
+    } else {
+        console.log("Updated users in room", roomId, room.users);
+        io.to(roomId).emit("users", room.users);
+    }
+
+    return roomId;
+};
+
 const generateRandomPosition = () => {
     return [0, 1, 0];
 };
@@ -144,23 +167,20 @@ io.on("connection", (socket) => {
         }
     });
 
+    //When user leaves the room but keeps the session alive
+    socket.on("leaveRoom", () => {
+        const roomId = removeUserFromRoom(socket.id);
+        if (!roomId) {
+            return;
+        }
+        socket.leave(roomId);
+        console.log(`User ${socket.id} left room ${roomId}`);
+    });
+
     //When user leaves
     socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
-
-        const found = findUserRoom(socket.id);
-        if (!found) return;
-        const { roomId, room } = found;
-        room.users = room.users.filter((u) => u.id !== socket.id);
-        if (room.users.length === 0) {
-            rooms.delete(roomId);
-            console.log("Room removed (empty):", roomId);
-            return;
-        }
-
-        console.log("Updated users in room", roomId, room.users);
-        io.to(roomId).emit("users", room.users);
-        
+        removeUserFromRoom(socket.id);
     });
 });
 
