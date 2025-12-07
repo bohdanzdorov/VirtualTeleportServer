@@ -42,7 +42,6 @@ const ensureRoom = (roomId = "LOBBY") => {
             users: [],
             tvLink: { ...DEFAULT_TV_LINK },
             isTVVisible: true,
-            webCamTVConnections: [],
         });
     }
     return rooms.get(normalized);
@@ -61,10 +60,6 @@ const removeUserFromRoom = (socketId) => {
     if (!found) return null;
 
     const { roomId, room } = found;
-
-    if (Array.isArray(room.webCamTVConnections) && room.webCamTVConnections.length > 0) {
-        room.webCamTVConnections = room.webCamTVConnections.filter((connection) => connection.userId !== socketId);
-    }
 
     room.users = room.users.filter((u) => u.id !== socketId);
 
@@ -127,25 +122,6 @@ io.on("connection", (socket) => {
         userToUpdate.rotation = user.rotation;
         io.to(roomId).emit("users", room.users);
     });
-
-    //When user leaves the virtual monitor
-    socket.on("freeWebCamTV", (chooseTvData) => {
-        const { userId } = chooseTvData;
-        const found = findUserRoom(userId);
-        if (!found) return;
-        const { roomId, room } = found;
-        const isTvOccupied = room.webCamTVConnections.some(a => a.userId === userId);
-        if (isTvOccupied) {
-            const updatedConnections = room.webCamTVConnections.filter(a => a.userId !== userId);
-            room.webCamTVConnections = [...updatedConnections];
-
-            const userToUpdate = room.users.find((u) => u.id === userId);
-            if (userToUpdate) {
-                userToUpdate.isVisible = true
-                io.to(roomId).emit("users", room.users);
-            }
-        }
-    })
 
     //When one of the users update the virtual TV link
     socket.on("tvLink", (tvLink) => {
