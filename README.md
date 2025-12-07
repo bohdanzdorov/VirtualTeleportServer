@@ -1,5 +1,4 @@
-## Virtual Teleport Server
-
+# Virtual Teleport Server
 The Virtual Teleport Server is the signalling and media-coordination backend for the Virtual Teleport experience. It exposes a Socket.IO gateway that manages shared rooms, avatar state, and virtual TV settings, and it issues short-lived Agora RTC tokens so clients can exchange real-time audio and video.
 
 ### Features
