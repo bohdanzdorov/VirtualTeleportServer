@@ -5,7 +5,7 @@ The Virtual Teleport Server is the signalling and media-coordination backend for
 ### Features
 - Socket.IO based room lifecycle with automatic cleanup when the last user leaves.
 - Tracks user avatars (appearance, transforms, visibility) and streams updates to everyone in the room.
-- Maintains shared virtual TV state (link, visibility, webcam occupancy) in memory per room.
+- Maintains shared virtual TV state (link, visibility) in memory per room.
 - Issues Agora RTC tokens on demand via `/rtc-token` to keep browser sessions authenticated.
 - Enforces CORS restrictions based on configuration to limit access to trusted frontends.
 
@@ -78,4 +78,4 @@ Socket events handled by the server:
 - Place the service behind HTTPS (or a reverse proxy) so browsers can access media and sockets securely.
 - Monitor memory usage if you expect many concurrent rooms; consider persistence for resilience.
 
-Refer to the [Virtual Teleport Client](../VirtualTeleportClient/README.md) for frontend setup and integration guidance.
+Refer to the [Virtual Teleport Client](https://github.com/bohdanzdorov/VirtualTeleportClient.git) for frontend setup and integration guidance.
