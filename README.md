@@ -1,6 +1,9 @@
 # Virtual Teleport Server
 The Virtual Teleport Server is the signalling and media-coordination backend for the Virtual Teleport experience. It exposes a Socket.IO gateway that manages shared rooms, avatar state, and virtual TV settings, and it issues short-lived Agora RTC tokens so clients can exchange real-time audio and video.
 
+### Deployment
+The project is deployed and can be checked out at [https://virtualteleport.netlify.app/](https://virtualteleport.netlify.app/)
+
 ### Features
 - Socket.IO based room lifecycle with automatic cleanup when the last user leaves.
 - Tracks user avatars (appearance, transforms, visibility) and streams updates to everyone in the room.
